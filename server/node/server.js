@@ -114,6 +114,8 @@ app.post('/webhook', async (req, res) => {
 
   if (eventType === 'checkout.session.completed') {
     console.log(`🔔  Payment received!`);
+  } else {
+    console.warn(`🤷‍♀️ Unhandled event type: ${eventType}`);
   }
 
   res.sendStatus(200);
