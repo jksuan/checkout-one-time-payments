@@ -12,7 +12,11 @@ export default defineConfig({
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
         }
-    }
+    },
+    allowedHosts: [
+      'localhost',
+      'stripe-client.08612345.xyz'
+    ]
   },
   build: {
     outDir: "build",
