@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const { resolve } = require('path');
+const cors = require('cors');
 // Copy the .env.example in the root into a .env file in this folder
 require('dotenv').config({ path: './.env' });
 
@@ -16,8 +17,16 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY, {
   }
 });
 
+// 配置CORS，允许前端域名访问
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
 
-app.use(express.static(process.env.STATIC_DIR));
+// 不再提供静态文件服务
+// app.use(express.static(process.env.STATIC_DIR));
+
 app.use(express.urlencoded({ extended: true }));
 app.use(
   express.json({
@@ -31,10 +40,27 @@ app.use(
   })
 );
 
-app.get('/', (req, res) => {
-  const path = resolve(process.env.STATIC_DIR + '/index.html');
-  res.sendFile(path);
-});
+// 不再提供静态文件服务
+// app.use(express.static(process.env.STATIC_DIR));
+
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  express.json({
+    // We need the raw body to verify webhook signatures.
+    // Let's compute it only when hitting the Stripe webhook endpoint.
+    verify: function (req, res, buf) {
+      if (req.originalUrl.startsWith('/webhook')) {
+        req.rawBody = buf.toString();
+      }
+    },
+  })
+);
+
+// 移除首页路由，前端将独立部署
+// app.get('/', (req, res) => {
+//   const path = resolve(process.env.STATIC_DIR + '/index.html');
+//   res.sendFile(path);
+// });
 
 app.get('/config', async (req, res) => {
   const price = await stripe.prices.retrieve(process.env.PRICE);
@@ -54,7 +80,7 @@ app.get('/checkout-session', async (req, res) => {
 });
 
 app.post('/create-checkout-session', async (req, res) => {
-  const domainURL = process.env.DOMAIN;
+  const domainURL = process.env.CLIENT_URL || 'http://localhost:5173';
 
   const { quantity } = req.body;
 
@@ -74,13 +100,18 @@ app.post('/create-checkout-session', async (req, res) => {
       },
     ],
     // ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
-    success_url: `${domainURL}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${domainURL}/canceled.html`,
+    success_url: `${domainURL}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${domainURL}/canceled`,
     // automatic_tax: {enabled: true},
   });
 
-  return res.redirect(303, session.url);
+  // 返回JSON而不是重定向
+  return res.json({ url: session.url });
 });
+
+// TODO: 发起chechout.session.expired事件的处理
+// 用户取消支付或者支付超时，触发checkout.session.expired或者payment_intent.canceled事件
+
 
 // Webhook handler for asynchronous events.
 app.post('/webhook', async (req, res) => {
@@ -114,6 +145,10 @@ app.post('/webhook', async (req, res) => {
 
   if (eventType === 'checkout.session.completed') {
     console.log(`🔔  Payment received!`);
+  } else if (eventType === 'checkout.session.expired') {
+    console.log(`🔔  Payment session expired!`);
+  } else if (eventType === 'payment_intent.canceled') {
+    console.log(`🔔  Payment canceled!`);
   } else {
     console.warn(`🤷‍♀️ Unhandled event type: ${eventType}`);
   }

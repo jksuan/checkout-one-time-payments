@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
         '/api': {
-          target: 'http://localhost:4242',
+          target: 'https://stripe-server.08612345.xyz',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
         }

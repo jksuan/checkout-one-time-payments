@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 const Success = () => {
   const [session, setSession] = useState({});
   const location = useLocation();
-  const sessionId = location.search.replace('?session_id=', '');
+  const sessionId = new URLSearchParams(location.search).get('session_id');
 
   useEffect(() => {
     async function fetchSession() {
       setSession(
-        await fetch('/api/checkout-session?sessionId=' + sessionId).then((res) =>
+        await fetch(`${API_URL}/checkout-session?sessionId=${sessionId}`).then((res) =>
           res.json()
         )
       );

@@ -22,19 +22,43 @@ const Checkout = () => {
   const [quantity, setQuantity] = useState(1);
   const [amount, setAmount] = useState(0);
   const [currency, setCurrency] = useState('USD');
+  
+  // 添加API URL常量
+  const API_URL = import.meta.env.VITE_API_URL || '/api';
 
   useEffect(() => {
     async function fetchConfig() {
-      // Fetch config from our backend.
+      // 更新API路径
       const {
         unitAmount,
         currency
-      } = await fetch('/api/config').then(r => r.json());
+      } = await fetch(`${API_URL}/config`).then(r => r.json());
       setAmount(unitAmount);
       setCurrency(currency);
     }
     fetchConfig();
   }, []);
+
+  // 添加表单提交处理函数
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch(`${API_URL}/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ quantity }),
+      });
+      
+      const { url } = await response.json();
+      // 重定向到Stripe Checkout页面
+      window.location.href = url;
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   return (
     <div className="sr-root">
@@ -52,7 +76,8 @@ const Checkout = () => {
               />
             </div>
           </div>
-          <form action="/api/create-checkout-session" method="POST">
+          {/* 修改表单，使用onSubmit处理函数 */}
+          <form onSubmit={handleSubmit}>
             <div className="quantity-setter">
               <button
                 className="increment-btn"

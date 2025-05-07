@@ -13,10 +13,10 @@ function App() {
   return (
     <Router>
       <Switch>
-        <Route path="/success.html">
+        <Route path="/success">
           <Success />
         </Route>
-        <Route path="/canceled.html">
+        <Route path="/canceled">
           <Canceled />
         </Route>
         <Route path="/">
